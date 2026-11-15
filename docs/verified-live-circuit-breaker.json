@@ -1,0 +1,40 @@
+{
+  "event_id": "verified-live-circuit-breaker-init-20261115",
+  "kind": "circuit_breaker",
+  "verified": true,
+  "verification": "Verified Live Circuit Breaker Record",
+  "occurred_at_utc": "2026-11-15T09:34:23.186Z",
+  "exchange_order_created_at_utc": "2026-11-15T09:34:23.668Z",
+  "exchange_fill_time_utc": "2026-11-15T09:34:23.668Z",
+  "instrument": "INIT-USDT-SWAP",
+  "trigger_return_pct": -26.59,
+  "threshold_pct": -25.0,
+  "side": "buy",
+  "order_type": "market",
+  "reduce_only": true,
+  "requested_size": "144",
+  "accumulated_fill_size": "144",
+  "latency_ms": 482,
+  "source_record_hash": "238117a47dd54b028bf702946ad7ec9dc1d35a706ea64fd884f923003d5cc6cd",
+  "source_hash": "238117a47dd54b028bf702946ad7ec9dc1d35a706ea64fd884f923003d5cc6cd",
+  "hash_input": {
+    "schema": "aegisflow.live-circuit-breaker.v1",
+    "occurred_at_utc": "2026-11-15T09:34:23.186Z",
+    "exchange_order_created_at_utc": "2026-11-15T09:34:23.668Z",
+    "exchange_fill_time_utc": "2026-11-15T09:34:23.668Z",
+    "instrument": "INIT-USDT-SWAP",
+    "trigger_return_pct": -26.59,
+    "threshold_pct": -25.0,
+    "action": "reduce_only_market_buy",
+    "order_type": "market",
+    "reduce_only": true,
+    "requested_size": "144",
+    "accumulated_fill_size": "144",
+    "order_state": "filled",
+    "source_files": [
+      "robot_journal/2026-11-15.txt",
+      "robot_journal/journal.sqlite3"
+    ]
+  },
+  "identifier_redaction": "Account identifier, exchange order ID, and client order ID are excluded from this public record and its hash input."
+}
