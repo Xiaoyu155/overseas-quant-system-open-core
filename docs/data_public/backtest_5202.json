@@ -1,0 +1,42 @@
+{
+  "schema": "public-backtest-summary-v1",
+  "bar_interval_hours": 8,
+  "bars_total": 5202,
+  "candidate_variants_evaluated": 448,
+  "windows": [
+    {
+      "name": "train",
+      "bars": 2190,
+      "cagr": 0.6448598026417169,
+      "max_drawdown": -0.4477113929064487,
+      "sharpe": 1.1163121707163364,
+      "calmar": 1.440347091583759
+    },
+    {
+      "name": "validation",
+      "bars": 546,
+      "cagr": 4.04172381623292,
+      "max_drawdown": -0.2542404345234158,
+      "sharpe": 2.1515957152691745,
+      "calmar": 15.897250269451819
+    },
+    {
+      "name": "test",
+      "bars": 2466,
+      "cagr": 2.000199752734868,
+      "max_drawdown": -0.45255390617311453,
+      "sharpe": 1.0624626158705472,
+      "calmar": 4.419804415453958
+    },
+    {
+      "name": "full_period",
+      "bars": 5202,
+      "cagr": 1.4599328385345736,
+      "max_drawdown": -0.45255390617311486,
+      "sharpe": 1.0726896114026732,
+      "calmar": 3.22598660318735
+    }
+  ],
+  "disclosure": "Historical simulation summary only; not live performance. Variant selection may introduce selection bias."
+}
+

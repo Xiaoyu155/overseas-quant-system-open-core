@@ -1,0 +1,15 @@
+.env
+.env.*
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.db
+*.log
+*.pem
+*.key
+*users.json*
+*state*.json
+__pycache__/
+.pytest_cache/
+node_modules/
+
