@@ -59,32 +59,52 @@
   <script>
     const locales = ['en','zh-CN','zh-TW','ja','ko','es'];
     const apiBase = location.hostname === 'jy.aiboxz.com' ? '' : 'https://jy.aiboxz.com';
+    const DATA_FETCH_TIMEOUT_MS = 5000;
+    async function fetchPublicJson(url, options = {}) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), DATA_FETCH_TIMEOUT_MS);
+      try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        if (!response.ok) throw Error(`Public data request failed: ${response.status}`);
+        return await response.json();
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    function readTimezonePreference() {
+      try { return localStorage.getItem('af_timezone') || 'UTC'; } catch { return 'UTC'; }
+    }
+    function saveTimezonePreference(value) {
+      try { localStorage.setItem('af_timezone', value); } catch {}
+    }
     const cookie = (name) => document.cookie.split('; ').find(x => x.startsWith(name + '='))?.split('=').slice(1).join('=');
     function detectLocale() { const saved = cookie('af_locale'); if (locales.includes(saved)) return saved; const preferred = navigator.languages?.length ? navigator.languages : [navigator.language || 'en']; for (const item of preferred) { const lang = item.toLowerCase(); const exact = locales.find(x => x.toLowerCase() === lang); if (exact) return exact; const base = lang.split('-')[0]; if (base === 'zh') return /-(tw|hk|mo)(-|$)/i.test(lang) ? 'zh-TW' : 'zh-CN'; const match = locales.find(x => x.split('-')[0].toLowerCase() === base); if (match) return match; } return 'en'; }
     let activeDictionary = {};
     let activeLocale = 'en'; let localeRequest = 0;
-    async function setLocale(locale) { if (!locales.includes(locale)) return; const request = ++localeRequest; try { const response = await fetch(`./locales/${locale}.json?v=20261115.2`, { cache: 'no-store' }); if (!response.ok) throw Error('locale unavailable'); const dict = await response.json(); if (request !== localeRequest) return; if (!dict || typeof dict['hero.title'] !== 'string') throw Error('invalid locale'); activeDictionary = dict; activeLocale = locale; document.documentElement.lang = locale; document.querySelectorAll('[data-i18n]').forEach(el => { const value = dict[el.dataset.i18n]; if (typeof value === 'string') el.textContent = value; }); document.cookie = `af_locale=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`; document.querySelector('#language').value = locale; refreshData(); loadEvents(); } catch (_) { if (request === localeRequest) document.querySelector('#language').value = activeLocale; } }
-    const tz = localStorage.getItem('af_timezone') || 'UTC'; document.querySelector('#timezone').value = tz;
-    document.querySelector('#timezone').addEventListener('change', e => { localStorage.setItem('af_timezone', e.target.value); refreshData(); });
+    async function setLocale(locale) { if (!locales.includes(locale)) return; const request = ++localeRequest; try { const dict = await fetchPublicJson(`./locales/${locale}.json?v=20261115.2`, { cache: 'no-store' }); if (request !== localeRequest) return; if (!dict || typeof dict['hero.title'] !== 'string') throw Error('invalid locale'); activeDictionary = dict; activeLocale = locale; document.documentElement.lang = locale; document.querySelectorAll('[data-i18n]').forEach(el => { const value = dict[el.dataset.i18n]; if (typeof value === 'string') el.textContent = value; }); document.cookie = `af_locale=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`; document.querySelector('#language').value = locale; refreshData(); loadEvents(); } catch (_) { if (request === localeRequest) document.querySelector('#language').value = activeLocale; } }
+    const timezoneSelect = document.querySelector('#timezone');
+    const savedTimezone = readTimezonePreference();
+    const tz = Array.from(timezoneSelect.options).some(option => option.value === savedTimezone) ? savedTimezone : 'UTC';
+    timezoneSelect.value = tz;
+    timezoneSelect.addEventListener('change', e => { saveTimezonePreference(e.target.value); refreshData(); });
     document.querySelector('#language').addEventListener('change', e => setLocale(e.target.value));
     let navSeries = [];
     function drawNav() { const c = document.querySelector('#nav-chart'), ctx = c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); ctx.strokeStyle='#34413d'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(40,20); ctx.lineTo(40,270); ctx.lineTo(980,270); ctx.stroke(); if (navSeries.length > 1) { const lo=Math.min(...navSeries), hi=Math.max(...navSeries); ctx.strokeStyle='#68d5a5'; ctx.lineWidth=3; ctx.beginPath(); navSeries.forEach((v,i)=>{ const x=45+i*930/(navSeries.length-1), y=260-(v-lo)/(hi-lo||1)*220; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }); ctx.stroke(); } ctx.save(); ctx.globalAlpha=0.16; ctx.fillStyle='#dce9e2'; ctx.font='700 36px ui-monospace, monospace'; ctx.fillText('AEGISFLOW',690,72); ctx.restore(); }
-    async function refreshData() { try { const r=await fetch(apiBase+'/api/public/unit-nav',{cache:'no-store'}); if(!r.ok) throw Error(); const d=await r.json(); const nav=Number(d.unit_nav); if(!Number.isFinite(nav)||nav<=0) throw Error(); navSeries=(d.series||[]).map(Number).filter(Number.isFinite); document.querySelector('#nav-value').textContent=nav.toFixed(6); const at=d.updated_at||d.as_of_utc||new Date().toISOString(); document.querySelector('#nav-updated').textContent=(activeDictionary['metrics.updated']||'Last update')+': '+new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'medium',timeZone:document.querySelector('#timezone').value==='UTC'?'UTC':undefined}).format(new Date(at)); document.querySelector('#nav-method').textContent=d.methodology||activeDictionary['metrics.methodology']||''; drawNav(); } catch { document.querySelector('#nav-value').textContent='--'; document.querySelector('#nav-updated').textContent=activeDictionary['metrics.noData']||'Live NAV feed unavailable'; document.querySelector('#nav-method').textContent=activeDictionary['metrics.methodology']||''; drawNav(); } }
+    async function refreshData() { try { const d=await fetchPublicJson(apiBase+'/api/public/unit-nav',{cache:'no-store'}); const nav=Number(d.unit_nav); if(!Number.isFinite(nav)||nav<=0) throw Error(); navSeries=(d.series||[]).map(Number).filter(Number.isFinite); document.querySelector('#nav-value').textContent=nav.toFixed(6); const at=d.updated_at||d.as_of_utc||new Date().toISOString(); document.querySelector('#nav-updated').textContent=(activeDictionary['metrics.updated']||'Last update')+': '+new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'medium',timeZone:document.querySelector('#timezone').value==='UTC'?'UTC':undefined}).format(new Date(at)); document.querySelector('#nav-method').textContent=d.methodology||activeDictionary['metrics.methodology']||''; drawNav(); } catch { document.querySelector('#nav-value').textContent='--'; document.querySelector('#nav-updated').textContent=activeDictionary['metrics.noData']||'Live NAV feed unavailable'; document.querySelector('#nav-method').textContent=activeDictionary['metrics.methodology']||''; drawNav(); } }
     async function loadEvents() {
       let rows;
       try {
-        const response = await fetch(apiBase + '/api/public/events', { cache: 'no-store' });
-        if (!response.ok) throw Error();
-        rows = await response.json();
+        rows = await fetchPublicJson(apiBase + '/api/public/events', { cache: 'no-store' });
       } catch {
         rows = [];
       }
       if (!Array.isArray(rows)) rows = [];
       if (!rows.some(event => event.verified)) {
         try {
-          const response = await fetch('./verified-live-circuit-breaker.json', { cache: 'no-cache' });
-          if (response.ok) rows.unshift(await response.json());
-        } catch {}
+          rows.unshift(await fetchPublicJson('./verified-live-circuit-breaker.json', { cache: 'no-cache' }));
+        } catch (error) {
+          console.debug('Verified event fallback unavailable', error);
+        }
       }
       try {
         const list = document.querySelector('#events');
@@ -131,7 +151,9 @@
           }
           list.append(article);
         });
-      } catch {}
+      } catch (error) {
+        console.error('Public events could not be rendered', error);
+      }
     }
     setLocale(detectLocale()); setInterval(refreshData,60000); setInterval(loadEvents,60000);
   </script>

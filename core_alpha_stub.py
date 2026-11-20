@@ -1,16 +1,34 @@
 """Public orchestration contracts. Private alpha implementations are omitted."""
 
 from dataclasses import dataclass
+from math import isfinite
 from typing import Mapping, Protocol, Sequence
 
 
 INTRADAY_GUARDIAN_INTERVAL_SECONDS = 15
 
 
+def _validate_finite_values(field: str, values: Mapping[str, float]) -> None:
+    if not isinstance(values, Mapping):
+        raise TypeError(f"{field} must be a mapping of names to finite numbers")
+    for key, value in values.items():
+        if not isinstance(key, str) or not key.strip() or isinstance(value, bool):
+            raise ValueError(f"{field}[{key!r}] must be a finite number")
+        try:
+            finite = isfinite(value)
+        except (TypeError, ValueError, OverflowError):
+            finite = False
+        if not finite:
+            raise ValueError(f"{field}[{key!r}] must be a finite number")
+
+
 @dataclass(frozen=True)
 class MarketContext:
     as_of_utc: str
     observations: Mapping[str, float]
+
+    def __post_init__(self) -> None:
+        _validate_finite_values("observations", self.observations)
 
 
 @dataclass(frozen=True)
@@ -23,6 +41,9 @@ class RegimeSnapshot:
 class PortfolioIntent:
     as_of_utc: str
     targets: Mapping[str, float]
+
+    def __post_init__(self) -> None:
+        _validate_finite_values("targets", self.targets)
 
 
 @dataclass(frozen=True)
