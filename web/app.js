@@ -1,6 +1,19 @@
 const dataRoot = document.documentElement.dataset.dataRoot || "./data_public";
 const numberFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+const DATA_FETCH_TIMEOUT_MS = 5000;
 let activeNavSeries = [];
+
+async function fetchPublicJson(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), DATA_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, { cache: "no-store", signal: controller.signal });
+    if (!response.ok) throw new Error(`Public data request failed: ${response.status}`);
+    return await response.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function drawNavChart(series) {
   const canvas = document.getElementById("nav-chart");
@@ -49,9 +62,7 @@ function drawNavChart(series) {
 async function loadUnitNav() {
   const status = document.getElementById("nav-status");
   try {
-    const response = await fetch(`${dataRoot}/unit_nav_history.json`, { cache: "no-store" });
-    if (!response.ok) throw new Error("No public series");
-    const data = await response.json();
+    const data = await fetchPublicJson(`${dataRoot}/unit_nav_history.json`);
     const series = Array.isArray(data.series) ? data.series : [];
     if (data.status !== "verified" || series.length < 2) {
       activeNavSeries = [];
@@ -75,9 +86,7 @@ async function loadUnitNav() {
 
 async function loadBenchmarks() {
   try {
-    const response = await fetch(`${dataRoot}/backtest_5202.json`, { cache: "no-store" });
-    if (!response.ok) return;
-    const data = await response.json();
+    const data = await fetchPublicJson(`${dataRoot}/backtest_5202.json`);
     document.getElementById("benchmark-bars").textContent = numberFormat.format(data.bars_total);
     document.getElementById("benchmark-variants").textContent = numberFormat.format(data.candidate_variants_evaluated);
     const test = data.windows.find((window) => window.name === "test");
@@ -92,9 +101,7 @@ async function loadBenchmarks() {
 
 async function loadDecisionSummaries() {
   try {
-    const response = await fetch(`${dataRoot}/decision_summaries.json`, { cache: "no-store" });
-    if (!response.ok) return;
-    const data = await response.json();
+    const data = await fetchPublicJson(`${dataRoot}/decision_summaries.json`);
     const records = Array.isArray(data.records) ? data.records : [];
     document.getElementById("snapshot-count").textContent = `${records.length} 條記錄`;
     const rows = document.getElementById("decision-rows");
